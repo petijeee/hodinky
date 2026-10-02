@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hodinky</title>
+<meta name="theme-color" content="#17243a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hodinky">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="robots" content="noindex">
+<style>header{padding-top:max(40px,env(safe-area-inset-top))}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --dial:#17243a; --steel:#8b97a6; --paper:#eef1f4; --card:#ffffff;
+  --ink:#17243a; --muted:#5d6a7a; --line:#d7dde4; --lume:#2f9e6b; --lume-soft:#dcf1e6;
+}
+@media (prefers-color-scheme: dark){
+  :root{--paper:#0f1726; --card:#17243a; --ink:#e8edf3; --muted:#9aa8b8; --line:#2a3a52; --lume:#5fd39a; --lume-soft:#163a2c;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 15px/1.5 Archivo,system-ui,sans-serif}
+header{background:var(--dial);color:#e8edf3;padding:40px 16px 28px}
+.wrap{max-width:880px;margin:0 auto}
+h1{font-stretch:125%;font-weight:800;font-size:clamp(34px,7vw,56px);line-height:1;margin:0 0 10px;letter-spacing:-.01em}
+header p{margin:0;color:#aab6c4;max-width:60ch}
+.summary{display:flex;gap:28px;flex-wrap:wrap;margin-top:22px}
+.summary b{font-stretch:125%;font-size:28px;display:block;line-height:1.1}
+.summary span{color:#aab6c4;font-size:13px}
+.summary .hit b{color:#5fd39a}
+main{padding:24px 16px 64px}
+.filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filters button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 14px;border-radius:999px;cursor:pointer}
+.filters button[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.filters button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--lume);outline-offset:2px}
+.watch{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:10px}
+.watch.hit{border-color:var(--lume);box-shadow:inset 4px 0 0 var(--lume)}
+summary{list-style:none;cursor:pointer;padding:16px 18px;display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:center}
+summary::-webkit-details-marker{display:none}
+.name{font-weight:650;font-size:16px}
+.price{font-stretch:115%;font-weight:750;font-size:22px;text-align:right;white-space:nowrap}
+.meta{color:var(--muted);font-size:13px}
+.delta{text-align:right;font-size:13px;color:var(--muted);white-space:nowrap}
+.hit .delta{color:var(--lume);font-weight:650}
+.track{grid-column:1/-1;position:relative;height:22px;margin-top:6px}
+.track .rail{position:absolute;left:0;right:0;top:10px;height:2px;background:var(--line)}
+.track .fill{position:absolute;top:9px;height:4px;border-radius:2px;background:var(--steel)}
+.hit .track .fill{background:var(--lume)}
+.track .tgt{position:absolute;top:2px;width:2px;height:18px;background:var(--ink)}
+.track .now{position:absolute;top:5px;width:12px;height:12px;border-radius:50%;background:var(--card);border:3px solid var(--ink);transform:translateX(-6px)}
+.hit .track .now{border-color:var(--lume)}
+.body{padding:0 18px 16px;display:grid;grid-template-columns:1fr 240px;gap:20px}
+.offers{margin:0;padding:0;list-style:none}
+.offers li{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.offers a{color:var(--ink)}
+.offers .best{font-weight:700}
+.spark{width:100%;height:80px}
+.spark path{fill:none;stroke:var(--ink);stroke-width:1.6}
+.spark line{stroke:var(--lume);stroke-dasharray:4 3}
+.sparkcap{font-size:12px;color:var(--muted)}
+.empty{color:var(--muted);padding:24px 0}
+footer{color:var(--muted);font-size:13px;margin-top:28px}
+@media (max-width:640px){.body{grid-template-columns:1fr}.price{font-size:19px}}
+@media (prefers-reduced-motion:no-preference){.now{transition:left .4s ease}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>Hodinky</h1>
+  <p>18 kúskov zo Speeed videa. Najnižšia dnešná cena s doručením na Slovensko a ako ďaleko je od tvojho cieľa.</p>
+  <div class="summary" id="summary"></div>
+</div></header>
+<main class="wrap">
+  <div class="filters" role="group" aria-label="Filter">
+    <button data-f="all" aria-pressed="true">Všetky</button>
+    <button data-f="hit" aria-pressed="false">Pod cieľom</button>
+    <button data-f="close" aria-pressed="false">Do 10 % od cieľa</button>
+  </div>
+  <div id="list"></div>
+  <footer id="foot"></footer>
+</main>
+<script>
+const DATA = {"watches": [{"name": "Certina DS Super PH500M", "target_eur": 850, "urls": ["https://www.helveti.sk/certina-ds-super-ph500m-c037-407-18-050-00", "https://steiner-juwelier.com/products/certina-ds-super-ph500m-c037-407-18-050-00"]}, {"name": "Marathon MSAR", "target_eur": 1250, "urls": ["https://watchbandit.com/products/marathon-36mm-medium-divers-automatic-msar-auto", {"url": "https://eu.marathonwatch.com/products/search-rescue-medium-divers-automatic.json", "re": "\"price\":\"([\\d.]+)\""}]}, {"name": "Baltic MR Roulette", "target_eur": 499, "urls": [{"url": "https://baltic-watches.com/en/products/mr-roulette-black", "re": "€\\s?(\\d{3,4})"}]}, {"name": "Hamilton Khaki Field Mechanical 38", "target_eur": 480, "urls": ["https://www.uhrenlounge.de/detail/hamilton-khaki-field-mechanical-officer-h69439933-19953", "https://www.helveti.sk/hamilton-khaki-field-mechanical-h69439933"]}, {"name": "Hamilton Khaki Field Quartz 38", "target_eur": 320, "urls": ["https://www.fabioferro.eu/en/hamilton-khaki-field-quartz-black-and-green-38mm-watch.html", "https://www.helveti.sk/hamilton-khaki-field-quartz-38mm-h69401930"]}, {"name": "Tissot PRX 40 Quartz", "target_eur": 350, "urls": ["https://www.helveti.sk/tissot-prx-40-t137-410-11-051-00", {"url": "https://www.presinsky.sk/tissot-prx-t137-410-11-041-00/", "re": "product:price:amount[\"'][^>]*content=[\"']([\\d.,]+)"}]}, {"name": "Tissot PRX 40 Powermatic 80", "target_eur": 660, "urls": ["https://www.helveti.sk/tissot-prx-powermatic-80-t137-407-11-051-00", "https://www.inhodinky.sk/tissot-hodinky/tissot-t137.407.11.051.00-prx-powermatic-80/"]}, {"name": "Citizen Promaster Fugu NY0140-80E", "target_eur": 255, "urls": [{"url": "https://www.watchpapst.de/en/ny0140-80e.html", "re": "\"price\":\"([\\d.]+)\""}, {"url": "https://www.zilkahodinky.sk/citizen-ny0140-80e-promaster-automatic/", "re": "product:price:amount[\"'][^>]*content=[\"']([\\d.,]+)"}, "https://www.helveti.sk/citizen-promaster-automatic-diver-sapphire-ny0140-80ee"]}, {"name": "Seiko Turtle SRPE93K1", "target_eur": 350, "urls": ["https://www.harveystore.com/products/seiko-mens-srp777k1-srpe93k1-prospex-turtle-auto", "https://www.helveti.sk/seiko-prospex-srpe93k1", "https://www.uhrenlounge.de/detail/seiko-prospex-divers-automatic-new-turtle-srpe93k1-25482"]}, {"name": "CWC G10 (landed odhad)", "target_eur": 375, "urls": [{"url": "https://www.cwcwatch.com/products/cwc-g10-issue-watch-no-date-with-battery-hatch", "fx": 1.686}, {"url": "https://www.silvermans.co.uk/products/cwc-g10-issue-watch-no-date", "fx": 1.42}]}, {"name": "Brew Metric PVD (landed odhad)", "target_eur": 480, "urls": [{"url": "https://www.brew-watches.com/products/brew-pvd-black-metric", "fx": 1.18}]}, {"name": "Seiko Presage Cocktail Time SRPB41J1", "target_eur": 350, "urls": ["https://www.koscom.sk/seiko-presage-cocktail-time-blue-moon-srpb41j1"]}, {"name": "Timex kolaborácie (len sledovanie)", "target_eur": null, "urls": ["https://timex.eu/products/todd-snyder-x-timex-marlin-mesh-34mm-stainless-steel-bracelet-watch-tw2y84000", "https://timex.eu/products/bespoke-post-x-timex-heritage-66-40mm-fabric-strap-watch-gift-set-twg069200"]}, {"name": "Seiko 5 Sports SSK001K1 GMT", "target_eur": 330, "urls": ["https://www.harveystore.com/products/seiko-mens-ssk001k1-sports-black-dial-gmt-watch", "https://www.ihodinarstvo.sk/hodinky/panske/vojenske/hodinky-seiko-ssk001k1-5-sports-automatic-gmt-series/"]}, {"name": "Orient Bambino V7 38", "target_eur": 215, "urls": [{"url": "https://www.zilkahodinky.sk/orient-ra-ac0m03s10b-classic-automatic-38mm/", "re": "product:price:amount[\"'][^>]*content=[\"']([\\d.,]+)"}, {"url": "https://www.zilkahodinky.sk/orient-ra-ac0m02b10b-classic-automatic-38mm/", "re": "product:price:amount[\"'][^>]*content=[\"']([\\d.,]+)"}, "https://www.zeitlounge.com/orient-classic-ra-ac0m01s10b-unisexuhr/a-135644"]}, {"name": "Timex Ironman 8-Lap OG JDM (landed odhad)", "target_eur": 120, "urls": [{"url": "https://www.ippojapanwatch.com/products/timex-tw5m54300", "fx": 0.00715}, {"url": "https://timexjapan.com/products/ironman%C2%AE-8-lap-og", "fx": 0.00715}]}, {"name": "Timex Ironman Flix TW5M63000", "target_eur": 65, "urls": ["https://hodinkovna.sk/hodinky-timex-tw5m63000", "https://watchard.com/timex-ironman-flix-chronograph-tw5m63000-watch"]}, {"name": "Sheffield QL1 (cena bez dopravy/DPH)", "target_eur": 45, "urls": [{"url": "https://sheffieldwatches.com/products/ql1-black.json", "fx": 0.86, "re": "\"price\":\"([\\d.]+)\""}, {"url": "https://sheffieldwatches.com/products/allsport-ql1-red.json", "fx": 0.86, "re": "\"price\":\"([\\d.]+)\""}]}, {"name": "Casio A500 oceľ", "target_eur": 39, "urls": ["https://www.inhodinky.sk/casio-hodinky/digitalne-hodinky-casio-a-500wea-1/", "https://o5dvanast.sk/hodinky-casio-a500wea-1ef/"]}, {"name": "Casio A500 zlatý", "target_eur": 58, "urls": ["https://hodinkovna.sk/hodinky-casio-vintage-a500wega-1ef", "https://o5dvanast.sk/hodinky-casio-a500wega-1ef/"]}, {"name": "Casio AQ-230 oceľ", "target_eur": 37, "urls": ["https://www.inhodinky.sk/casio-hodinky/aq-230-1-casio/", {"url": "https://www.zilkahodinky.sk/casio-aq-230a-1dmqyes-collection/", "re": "product:price:amount[\"'][^>]*content=[\"']([\\d.,]+)"}]}, {"name": "Casio AQ-230 zlatý", "target_eur": 48, "urls": ["https://o5dvanast.sk/hodinky-casio-aq-230ga-9dmqyes/", "https://www.helveti.sk/casio-collection-vintage-aq-230ga-9dmqyes"]}, {"name": "Casio F-91W", "target_eur": 16, "urls": ["https://o5dvanast.sk/hodinky-casio-f-91w-1yer/", {"url": "https://www.zilkahodinky.sk/hodinky-casio-f-91w-1yer/", "re": "product:price:amount[\"'][^>]*content=[\"']([\\d.,]+)"}, "https://www.inhodinky.sk/casio-hodinky/casio-collection-f-91-1/"]}], "history": [{"date": "2026-10-02", "watch": "Certina DS Super PH500M", "shop": "helveti.sk", "price": 995.0, "url": "https://www.helveti.sk/certina-ds-super-ph500m-c037-407-18-050-00"}, {"date": "2026-10-02", "watch": "Certina DS Super PH500M", "shop": "steiner-juwelier.com", "price": 978.87, "url": "https://steiner-juwelier.com/products/certina-ds-super-ph500m-c037-407-18-050-00"}, {"date": "2026-10-02", "watch": "Marathon MSAR", "shop": "watchbandit.com", "price": 1450.0, "url": "https://watchbandit.com/products/marathon-36mm-medium-divers-automatic-msar-auto"}, {"date": "2026-10-02", "watch": "Marathon MSAR", "shop": "eu.marathonwatch.com", "price": 1450.0, "url": "https://eu.marathonwatch.com/products/search-rescue-medium-divers-automatic.json"}, {"date": "2026-10-02", "watch": "Baltic MR Roulette", "shop": "baltic-watches.com", "price": 545.0, "url": "https://baltic-watches.com/en/products/mr-roulette-black"}, {"date": "2026-10-02", "watch": "Hamilton Khaki Field Mechanical 38", "shop": "uhrenlounge.de", "price": 625.0, "url": "https://www.uhrenlounge.de/detail/hamilton-khaki-field-mechanical-officer-h69439933-19953"}, {"date": "2026-10-02", "watch": "Hamilton Khaki Field Mechanical 38", "shop": "helveti.sk", "price": 685.0, "url": "https://www.helveti.sk/hamilton-khaki-field-mechanical-h69439933"}, {"date": "2026-10-02", "watch": "Hamilton Khaki Field Quartz 38", "shop": "fabioferro.eu", "price": 352.0, "url": "https://www.fabioferro.eu/en/hamilton-khaki-field-quartz-black-and-green-38mm-watch.html"}, {"date": "2026-10-02", "watch": "Hamilton Khaki Field Quartz 38", "shop": "helveti.sk", "price": 470.0, "url": "https://www.helveti.sk/hamilton-khaki-field-quartz-38mm-h69401930"}, {"date": "2026-10-02", "watch": "Tissot PRX 40 Quartz", "shop": "helveti.sk", "price": 415.0, "url": "https://www.helveti.sk/tissot-prx-40-t137-410-11-051-00"}, {"date": "2026-10-02", "watch": "Tissot PRX 40 Quartz", "shop": "presinsky.sk", "price": 415.0, "url": "https://www.presinsky.sk/tissot-prx-t137-410-11-041-00/"}, {"date": "2026-10-02", "watch": "Tissot PRX 40 Powermatic 80", "shop": "helveti.sk", "price": 775.0, "url": "https://www.helveti.sk/tissot-prx-powermatic-80-t137-407-11-051-00"}, {"date": "2026-10-02", "watch": "Tissot PRX 40 Powermatic 80", "shop": "inhodinky.sk", "price": 775.0, "url": "https://www.inhodinky.sk/tissot-hodinky/tissot-t137.407.11.051.00-prx-powermatic-80/"}, {"date": "2026-10-02", "watch": "Citizen Promaster Fugu NY0140-80E", "shop": "watchpapst.de", "price": 314.1, "url": "https://www.watchpapst.de/en/ny0140-80e.html"}, {"date": "2026-10-02", "watch": "Citizen Promaster Fugu NY0140-80E", "shop": "zilkahodinky.sk", "price": 329.0, "url": "https://www.zilkahodinky.sk/citizen-ny0140-80e-promaster-automatic/"}, {"date": "2026-10-02", "watch": "Citizen Promaster Fugu NY0140-80E", "shop": "helveti.sk", "price": 375.0, "url": "https://www.helveti.sk/citizen-promaster-automatic-diver-sapphire-ny0140-80ee"}, {"date": "2026-10-02", "watch": "Seiko Turtle SRPE93K1", "shop": "harveystore.com", "price": 389.0, "url": "https://www.harveystore.com/products/seiko-mens-srp777k1-srpe93k1-prospex-turtle-auto"}, {"date": "2026-10-02", "watch": "Seiko Turtle SRPE93K1", "shop": "helveti.sk", "price": 439.0, "url": "https://www.helveti.sk/seiko-prospex-srpe93k1"}, {"date": "2026-10-02", "watch": "Seiko Turtle SRPE93K1", "shop": "uhrenlounge.de", "price": 405.0, "url": "https://www.uhrenlounge.de/detail/seiko-prospex-divers-automatic-new-turtle-srpe93k1-25482"}, {"date": "2026-10-02", "watch": "CWC G10 (landed odhad)", "shop": "cwcwatch.com", "price": 420.1, "url": "https://www.cwcwatch.com/products/cwc-g10-issue-watch-no-date-with-battery-hatch"}, {"date": "2026-10-02", "watch": "CWC G10 (landed odhad)", "shop": "silvermans.co.uk", "price": 424.58, "url": "https://www.silvermans.co.uk/products/cwc-g10-issue-watch-no-date"}, {"date": "2026-10-02", "watch": "Brew Metric PVD (landed odhad)", "shop": "brew-watches.com", "price": 560.5, "url": "https://www.brew-watches.com/products/brew-pvd-black-metric"}, {"date": "2026-10-02", "watch": "Seiko Presage Cocktail Time SRPB41J1", "shop": "koscom.sk", "price": 430.0, "url": "https://www.koscom.sk/seiko-presage-cocktail-time-blue-moon-srpb41j1"}, {"date": "2026-10-02", "watch": "Timex kolaborácie (len sledovanie)", "shop": "timex.eu", "price": 189.0, "url": "https://timex.eu/products/todd-snyder-x-timex-marlin-mesh-34mm-stainless-steel-bracelet-watch-tw2y84000"}, {"date": "2026-10-02", "watch": "Timex kolaborácie (len sledovanie)", "shop": "timex.eu", "price": 259.0, "url": "https://timex.eu/products/bespoke-post-x-timex-heritage-66-40mm-fabric-strap-watch-gift-set-twg069200"}, {"date": "2026-10-02", "watch": "Seiko 5 Sports SSK001K1 GMT", "shop": "harveystore.com", "price": 405.0, "url": "https://www.harveystore.com/products/seiko-mens-ssk001k1-sports-black-dial-gmt-watch"}, {"date": "2026-10-02", "watch": "Seiko 5 Sports SSK001K1 GMT", "shop": "ihodinarstvo.sk", "price": 452.0, "url": "https://www.ihodinarstvo.sk/hodinky/panske/vojenske/hodinky-seiko-ssk001k1-5-sports-automatic-gmt-series/"}, {"date": "2026-10-02", "watch": "Orient Bambino V7 38", "shop": "zilkahodinky.sk", "price": 246.0, "url": "https://www.zilkahodinky.sk/orient-ra-ac0m03s10b-classic-automatic-38mm/"}, {"date": "2026-10-02", "watch": "Orient Bambino V7 38", "shop": "zilkahodinky.sk", "price": 269.0, "url": "https://www.zilkahodinky.sk/orient-ra-ac0m02b10b-classic-automatic-38mm/"}, {"date": "2026-10-02", "watch": "Orient Bambino V7 38", "shop": "zeitlounge.com", "price": 285.0, "url": "https://www.zeitlounge.com/orient-classic-ra-ac0m01s10b-unisexuhr/a-135644"}, {"date": "2026-10-02", "watch": "Timex Ironman Flix TW5M63000", "shop": "hodinkovna.sk", "price": 79.0, "url": "https://hodinkovna.sk/hodinky-timex-tw5m63000"}, {"date": "2026-10-02", "watch": "Timex Ironman Flix TW5M63000", "shop": "watchard.com", "price": 79.0, "url": "https://watchard.com/timex-ironman-flix-chronograph-tw5m63000-watch"}, {"date": "2026-10-02", "watch": "Sheffield QL1 (cena bez dopravy/DPH)", "shop": "sheffieldwatches.com", "price": 50.7, "url": "https://sheffieldwatches.com/products/ql1-black.json"}, {"date": "2026-10-02", "watch": "Sheffield QL1 (cena bez dopravy/DPH)", "shop": "sheffieldwatches.com", "price": 50.7, "url": "https://sheffieldwatches.com/products/allsport-ql1-red.json"}, {"date": "2026-10-02", "watch": "Casio A500 oceľ", "shop": "inhodinky.sk", "price": 44.9, "url": "https://www.inhodinky.sk/casio-hodinky/digitalne-hodinky-casio-a-500wea-1/"}, {"date": "2026-10-02", "watch": "Casio A500 oceľ", "shop": "o5dvanast.sk", "price": 48.0, "url": "https://o5dvanast.sk/hodinky-casio-a500wea-1ef/"}, {"date": "2026-10-02", "watch": "Casio A500 zlatý", "shop": "hodinkovna.sk", "price": 69.0, "url": "https://hodinkovna.sk/hodinky-casio-vintage-a500wega-1ef"}, {"date": "2026-10-02", "watch": "Casio A500 zlatý", "shop": "o5dvanast.sk", "price": 69.0, "url": "https://o5dvanast.sk/hodinky-casio-a500wega-1ef/"}, {"date": "2026-10-02", "watch": "Casio AQ-230 oceľ", "shop": "inhodinky.sk", "price": 42.9, "url": "https://www.inhodinky.sk/casio-hodinky/aq-230-1-casio/"}, {"date": "2026-10-02", "watch": "Casio AQ-230 oceľ", "shop": "zilkahodinky.sk", "price": 49.0, "url": "https://www.zilkahodinky.sk/casio-aq-230a-1dmqyes-collection/"}, {"date": "2026-10-02", "watch": "Casio AQ-230 zlatý", "shop": "o5dvanast.sk", "price": 55.0, "url": "https://o5dvanast.sk/hodinky-casio-aq-230ga-9dmqyes/"}, {"date": "2026-10-02", "watch": "Casio AQ-230 zlatý", "shop": "helveti.sk", "price": 69.9, "url": "https://www.helveti.sk/casio-collection-vintage-aq-230ga-9dmqyes"}, {"date": "2026-10-02", "watch": "Casio F-91W", "shop": "o5dvanast.sk", "price": 19.0, "url": "https://o5dvanast.sk/hodinky-casio-f-91w-1yer/"}, {"date": "2026-10-02", "watch": "Casio F-91W", "shop": "zilkahodinky.sk", "price": 19.0, "url": "https://www.zilkahodinky.sk/hodinky-casio-f-91w-1yer/"}, {"date": "2026-10-02", "watch": "Casio F-91W", "shop": "inhodinky.sk", "price": 21.9, "url": "https://www.inhodinky.sk/casio-hodinky/casio-collection-f-91-1/"}], "generated": "02. 10. 2026 14:53"};
+const eur = n => n.toLocaleString('sk-SK',{maximumFractionDigits:n<100?2:0})+' €';
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const lastDate = DATA.history.reduce((m,r)=>r.date>m?r.date:m,'');
+const rows = DATA.watches.map(w=>{
+  const h = DATA.history.filter(r=>r.watch===w.name);
+  const today = h.filter(r=>r.date===lastDate).sort((a,b)=>a.price-b.price);
+  const byDay = {};
+  h.forEach(r=>{byDay[r.date]=Math.min(byDay[r.date]??Infinity,r.price)});
+  const series = Object.entries(byDay).sort();
+  const best = today[0];
+  const gap = best && w.target_eur ? (best.price - w.target_eur)/w.target_eur : null;
+  return {w,today,series,best,gap,hit:gap!==null&&gap<=0};
+}).sort((a,b)=>(a.gap??9)-(b.gap??9));
+
+function spark(series,target){
+  if(series.length<2) return `<p class="sparkcap">Graf sa ukáže po druhom dni merania.</p>`;
+  const v=series.map(s=>s[1]).concat(target?[target]:[]), lo=Math.min(...v), hi=Math.max(...v), W=240,H=80,p=6;
+  const x=i=>p+i*(W-2*p)/(series.length-1), y=n=>H-p-(n-lo)/((hi-lo)||1)*(H-2*p);
+  const d=series.map((s,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(s[1]).toFixed(1)).join(' ');
+  const t=target?`<line x1="0" x2="${W}" y1="${y(target)}" y2="${y(target)}"/>`:'';
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Vývoj najnižšej ceny">${t}<path d="${d}"/></svg>
+  <p class="sparkcap">Najnižšia cena za ${series.length} dní, prerušovaná čiara je cieľ.</p>`;
+}
+
+function track(r){
+  if(!r.best||!r.w.target_eur) return '';
+  // spoločná stupnica pre všetky hodinky: cieľ −25 % až +50 %, aby sa vzdialenosti dali porovnať
+  const lo=r.w.target_eur*0.75, hi=r.w.target_eur*1.5;
+  const pos=n=>(Math.max(0,Math.min(1,(n-lo)/(hi-lo)))*100).toFixed(1)+'%';
+  const a=Math.min(r.best.price,r.w.target_eur), b=Math.max(r.best.price,r.w.target_eur);
+  return `<div class="track" aria-hidden="true"><div class="rail"></div>
+    <div class="fill" style="left:${pos(a)};width:calc(${pos(b)} - ${pos(a)})"></div>
+    <div class="tgt" style="left:${pos(r.w.target_eur)}"></div><div class="now" style="left:${pos(r.best.price)}"></div></div>`;
+}
+
+function render(f){
+  const list=document.getElementById('list');
+  const shown=rows.filter(r=>f==='all'||(f==='hit'&&r.hit)||(f==='close'&&r.gap!==null&&r.gap<=0.10));
+  list.innerHTML = shown.length ? shown.map(r=>{
+    const delta = r.gap===null ? (r.w.target_eur?'cena dnes nenačítaná':'len sledovanie')
+      : r.hit ? `${eur(r.w.target_eur-r.best.price)} pod cieľom` : `o ${Math.round(r.gap*100)} % nad cieľom ${eur(r.w.target_eur)}`;
+    const offers = r.today.map((o,i)=>`<li class="${i?'':'best'}"><a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.shop)}</a><span>${eur(o.price)}</span></li>`).join('')
+      || '<li>Dnes žiadna dostupná ponuka (vypredané alebo stránka neodpovedala).</li>';
+    return `<details class="watch${r.hit?' hit':''}"><summary>
+      <span class="name">${esc(r.w.name)}</span><span class="price">${r.best?eur(r.best.price):'—'}</span>
+      <span class="meta">${r.best?'najlacnejšie: '+esc(r.best.shop):''}</span><span class="delta">${delta}</span>
+      ${track(r)}</summary>
+      <div class="body"><ul class="offers">${offers}</ul><div>${spark(r.series,r.w.target_eur)}</div></div></details>`;
+  }).join('') : '<p class="empty">Momentálne nič. Keď cena klesne, objaví sa tu a príde ti notifikácia.</p>';
+}
+
+const hits=rows.filter(r=>r.hit).length, close=rows.filter(r=>r.gap!==null&&r.gap>0&&r.gap<=0.10).length;
+document.getElementById('summary').innerHTML=
+  `<div class="hit"><b>${hits}</b><span>pod cieľom</span></div><div><b>${close}</b><span>do 10 % od cieľa</span></div><div><b>${rows.length}</b><span>sledovaných</span></div>`;
+document.getElementById('foot').textContent = lastDate
+  ? `Ceny z ${lastDate}, stránka vygenerovaná ${DATA.generated}. Aktualizuje sa každý deň o 9:00.`
+  : 'Zatiaľ žiadne merania. Spusti python3 ~/hodinky/price_watch.py.';
+document.querySelectorAll('.filters button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.filters button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  render(b.dataset.f);
+});
+render('all');
+</script>
+</body>
+</html>
